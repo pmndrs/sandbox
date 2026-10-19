@@ -1,33 +1,24 @@
 import type { Path } from './types.ts';
 
-/** what the dev server knows about one module after transforming it. */
 export type ModuleNode = {
     id: Path;
     importers: Set<Path>;
     imports: Set<Path>;
-    /** `import.meta.hot.accept()` / `accept(cb)`. */
     selfAccepting: boolean;
-    /** ids passed to `import.meta.hot.accept(deps, cb)`. */
     acceptedDeps: Set<Path>;
 };
 
 /** an hmr boundary: `boundary` re-imports `acceptedVia`. */
 export type Boundary = { boundary: Path; acceptedVia: Path };
 
-/** boundaries to hot-update, plus every module that must re-evaluate (null → full reload). */
+/** null → full reload. */
 export type Propagation = { boundaries: Boundary[]; stale: Set<Path> } | null;
 
 export type Graph = {
     get(id: Path): ModuleNode | undefined;
-    /**
-     * record a freshly transformed module's edges + accept info. returns the
-     * modules nothing imports any more (dropped imports, transitively) — to prune.
-     */
+    /** returns modules nothing imports any more (dropped imports, transitively). */
     set(id: Path, info: { imports: Iterable<Path>; selfAccepting: boolean; acceptedDeps: Iterable<Path> }): Path[];
-    /**
-     * walk importers from `id` up to accepting modules (vite's `propagateUpdate`).
-     * `fromImporters` skips `id` itself — for `import.meta.hot.invalidate()`.
-     */
+    /** vite's `propagateUpdate`. `fromImporters` skips `id` itself, for `import.meta.hot.invalidate()`. */
     propagate(id: Path, fromImporters?: boolean): Propagation;
 };
 
@@ -43,7 +34,7 @@ export function createGraph(): Graph {
         return node;
     };
 
-    /** false = reached a module nothing accepts (dead end → full reload). */
+    // false = reached a module nothing accepts (full reload).
     const walk = (node: ModuleNode, boundaries: Boundary[], stale: Set<Path>, chain: Path[]): boolean => {
         if (stale.has(node.id)) return true;
         stale.add(node.id);
@@ -109,10 +100,7 @@ export function createGraph(): Graph {
 
 const ACCEPT = /import\.meta\.hot\.accept\(\s*(?:(["'`])([^"'`]+)\1|\[([^\]]*)\])?/g;
 
-/**
- * lex `import.meta.hot.accept(...)` calls (a cut-down vite `lexAcceptedHmrDeps`):
- * no arg or a callback → self-accepting; a string or string array → accepted deps.
- */
+/** a cut-down vite `lexAcceptedHmrDeps`. */
 export function lexAccepts(code: string): { selfAccepting: boolean; deps: string[] } {
     let selfAccepting = false;
     const deps: string[] = [];

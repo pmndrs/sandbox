@@ -8,30 +8,19 @@ import type { MountEvent } from './protocol.ts';
 import { inferEntry, inferTemplate, TEMPLATE_DEPENDENCIES, TEMPLATE_PLUGINS, withTemplate } from './templates.ts';
 import type { Dependencies, Path, SandboxOptions, TemplateName } from './types.ts';
 
-/**
- * the batteries-included preset over `createDevServer`: a memory fs, template
- * files + plugins, esm.sh deps, and one preview iframe.
- */
 export type Sandbox = {
     readonly fs: MemoryFs;
     readonly template: TemplateName;
     readonly entry: Path;
-    /** resolved deps (template + user), all versioned. */
     readonly dependencies: Dependencies;
-    /** preview events (ready / console / errors / hmr) for the host ui. */
     readonly messages: Emitter<MountEvent>;
-    /** the deps' `.d.ts` files, for an editor (fetched from esm.sh). */
     types(): Promise<TypeAcquisition>;
-    /** mount into an iframe and run. */
     attach(iframe: HTMLIFrameElement): void;
-    /** write a file; the preview hot-updates. */
     update(path: Path, source: string): void;
     dispose(): void;
 };
 
 export function createSandbox(options: SandboxOptions): Sandbox {
-    // infer the template from the user's files, then merge template defaults (incl a
-    // real `/index.*` that mounts) under them. the entry is that real index file.
     const template = inferTemplate(options.files, options.template);
     const files = withTemplate(options.files, template);
     const fs = memoryFs(files);

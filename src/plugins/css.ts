@@ -1,6 +1,5 @@
 import type { Plugin } from '../core/plugin.ts';
 
-/** short, stable hash of a string (fnv-1a → base36). */
 function hash(text: string): string {
     let h = 0x811c9dc5;
     for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 0x01000193);
@@ -9,17 +8,12 @@ function hash(text: string): string {
 
 const IDENT = /^[A-Za-z_$][\w$]*$/;
 
-/**
- * css modules: scope every class in selectors to `name_hash`, except inside
- * `:global(...)`. a small scanner, not a css parser: text before `{` is a
- * selector (or an at-rule prelude, left alone); declarations are never touched.
- */
+/** a scanner, not a css parser: text before `{` is a selector (or an at-rule prelude, left alone). */
 function scopeClasses(css: string, id: string, classes: Record<string, string>): string {
     const suffix = hash(id);
     const source = css.replace(/\/\*[\s\S]*?\*\//g, '');
     return source.replace(/([^{};]*)\{/g, (_, prelude: string) => {
         if (prelude.trim().startsWith('@')) return `${prelude}{`;
-        // mask strings + :global(...) so their contents are never scoped.
         const masked: string[] = [];
         const mask = (s: string) => `\0${masked.push(s) - 1}\0`;
         let selector = prelude
@@ -34,10 +28,8 @@ function scopeClasses(css: string, id: string, classes: Record<string, string>):
 }
 
 /**
- * `import './a.css'` → a module that owns one `<style>` tag. plain css
- * self-accepts, so an edit swaps the text in place. `*.module.css` exports its
- * scoped class names and lets the edit reach its importers instead. relative
- * `url(...)`s become imports, so `assets()` serves them.
+ * plain css self-accepts (edits swap the text in place); `*.module.css` doesn't,
+ * so edits reach importers holding its class names. relative `url()`s become imports for `assets()`.
  */
 export function css(): Plugin {
     return {
@@ -48,7 +40,6 @@ export function css(): Plugin {
             const classes: Record<string, string> = {};
             const source = isModule ? scopeClasses(code, id, classes) : code;
 
-            // split around local url()s: the css string is rebuilt at runtime around imported urls.
             const imports: string[] = [];
             const parts: string[] = [];
             let last = 0;

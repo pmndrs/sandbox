@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { useActiveFile, useSandbox } from './context.ts';
 import type { SyntaxStyle, Theme } from './theme.ts';
 
-/** ATA: fetch dep `.d.ts` from esm.sh and register them in Monaco's TS + JS workers. */
 function useTypeAcquisition(monaco: Monaco | null): void {
     const { sandbox } = useSandbox();
     useEffect(() => {
@@ -48,7 +47,6 @@ const isDark = (theme: Theme): boolean => {
     return 0.299 * r + 0.587 * g + 0.114 * b < 128;
 };
 
-/** Build a Monaco theme from the sandpack-style syntax tokens. */
 function defineTheme(monaco: Monaco, theme: Theme): void {
     const s = theme.syntax;
     monaco.editor.defineTheme(THEME_NAME, {
@@ -95,13 +93,12 @@ function configureTs(monaco: Monaco): void {
     };
     ts.typescriptDefaults.setCompilerOptions(options);
     ts.javascriptDefaults.setCompilerOptions(options);
-    // Bare-import "cannot find module" — silence until ATA loads types (monaco.md).
+    // bare-import "cannot find module": noise until type acquisition loads the .d.ts.
     const diag = { diagnosticCodesToIgnore: [2307, 2792] };
     ts.typescriptDefaults.setDiagnosticsOptions(diag);
     ts.javascriptDefaults.setDiagnosticsOptions(diag);
 }
 
-/** The Monaco-backed editor for the active file. Lazy-loaded (CDN) by @monaco-editor/react. */
 export function MonacoEditor() {
     const { theme } = useSandbox();
     const { path, code, setCode } = useActiveFile();
@@ -109,7 +106,7 @@ export function MonacoEditor() {
     useTypeAcquisition(monaco);
     return (
         <Editor
-            // `file://` uri so node_modules resolution reaches the ATA `.d.ts`.
+            // `file://` uri so node_modules resolution reaches the acquired `.d.ts`.
             path={`file://${path}`}
             language={langOf(path)}
             value={code}

@@ -1,6 +1,3 @@
-// @pmndrs/sandbox/react — React layer over the core Sandbox handle.
-// Style modeled on sandpack-react (see llm/notes/react-api.md, theme.ts).
-
 export {
     Sandbox,
     type SandboxProps,

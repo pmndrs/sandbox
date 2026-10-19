@@ -4,7 +4,7 @@ import { loadOxc } from '../src/core/oxc.ts';
 import type { Client, FetchOptions, SessionCore } from '../src/core/session.ts';
 import type { HmrUpdate } from '../src/core/protocol.ts';
 
-/** the same wasm binding the browser loads, compiled from node_modules. */
+/** the same wasm binding the browser loads. */
 export const oxc = () =>
     loadOxc(
         readFile(new URL('../node_modules/@oxc-transform/binding-wasm32-wasip1/transform.wasm32-wasip1.wasm', import.meta.url)).then(
@@ -17,17 +17,11 @@ export type TestRunner = {
     client: Client;
     /** lines the evaluator wraps around module code (for `core.mapStack`). */
     startOffset: number;
-    /** hmr outcomes delivered to this client, in order. */
     updates: HmrUpdate[];
-    /** resolves once the runner has applied every queued update. */
     settle(): Promise<void>;
 };
 
-/**
- * what `mount.ts` does over postMessage, in-process: a `Client` registered on
- * the session core + vite's module runner wired to it. bare imports resolve
- * from `externals` instead of an import map.
- */
+/** in-process stand-in for `mount.ts`. bare imports resolve from `externals` instead of an import map. */
 export function createTestRunner(core: SessionCore, externals: Record<string, unknown> = {}): TestRunner {
     const updates: HmrUpdate[] = [];
     let onHot: ((payload: unknown) => Promise<void> | void) | undefined;

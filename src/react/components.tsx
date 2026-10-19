@@ -14,7 +14,6 @@ export type SandboxProviderProps = SandboxOptions & {
     children?: ReactNode;
 };
 
-/** Creates + holds one core Sandbox, injects the theme, provides context. */
 export function SandboxProvider({ theme, className, style, children, ...options }: SandboxProviderProps) {
     const [sandbox] = useState(() => createSandbox(options));
     // binary files (images, fonts) run in the preview but have no editor tab.
@@ -60,7 +59,6 @@ export function FileTabs() {
 
 export type SandboxCodeEditorProps = { showTabs?: boolean };
 
-/** Basic controlled editor (a styled textarea) — Monaco/highlighting slot in later. */
 export function SandboxCodeEditor({ showTabs = true }: SandboxCodeEditorProps) {
     return (
         <div className="sbx-editor">
@@ -84,8 +82,7 @@ export function SandboxPreview() {
         return sandbox.messages.subscribe((m) => {
             if (m.type === 'runtime-error')
                 setError(m.loc ? `${m.loc.file}:${m.loc.line}:${m.loc.column}\n${m.message}` : m.message);
-            // A clean compile/HMR apply (or a fresh load) clears a prior error — so
-            // editing back to valid recovers the preview instead of staying stuck.
+            // so editing back to valid recovers the preview instead of staying stuck.
             else if (m.type === 'ready' || m.type === 'hmr') setError(null);
         });
     }, [sandbox]);
@@ -120,7 +117,6 @@ export function SandboxConsole() {
 
 export type SandboxProps = SandboxProviderProps & { showTabs?: boolean; showConsole?: boolean };
 
-/** The opinionated preset: provider + editor | (preview + console). */
 export function Sandbox({ showTabs, showConsole = false, ...providerProps }: SandboxProps) {
     return (
         <SandboxProvider {...providerProps}>

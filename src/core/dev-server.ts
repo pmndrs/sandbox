@@ -7,27 +7,24 @@ import type { Path } from './types.ts';
 
 export type DevServerOptions = {
     fs: Fs;
-    /** transforms, in order. e.g. `[css(), json(), assets(), typescript(), react()]`. */
+    /** applied in order, e.g. `[css(), json(), assets(), typescript(), react()]`. */
     plugins?: Plugin[];
-    /** `import.meta.env` in the preview (merged over vite-style defaults). */
+    /** `import.meta.env`, merged over vite-style defaults. */
     env?: Record<string, unknown>;
-    /** where the oxc wasm comes from (defaults to a pinned CDN url), or a loaded binding. */
+    /** defaults to a pinned CDN url. */
     oxc?: OxcWasm | Oxc;
 };
 
-/** a running dev graph: transforms on demand, hot-updates every mount. */
 export type Session = {
-    /** run `entry` in an iframe. */
     mount(entry: Path, options: MountOptions): Mount;
-    /** tell the session a file changed (only needed when `fs` has no `watch`). */
+    /** only needed when `fs` has no `watch`. */
     update(path: Path): void;
-    /** the transform core, for custom clients (tests, workers). */
+    /** for custom clients (tests, workers). */
     readonly core: SessionCore;
     close(): void;
 };
 
 export type DevServer = {
-    /** load oxc, run plugin setup, build the import map, then start a session. */
     open(): Promise<Session>;
 };
 

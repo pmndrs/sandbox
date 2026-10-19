@@ -1,6 +1,4 @@
-// Theme — modeled on sandpack-react's token system (surfaces / base / accent /
-// syntax / font), expressed as `--sbx-*` CSS variables + one injected stylesheet.
-// Values ported verbatim from sandpack's defaultLight / defaultDark.
+// values ported verbatim from sandpack-react's defaultLight / defaultDark.
 
 import type { CSSProperties } from 'react';
 
@@ -115,7 +113,6 @@ export function resolveTheme(theme: ThemeProp = 'dark'): Theme {
     return dark;
 }
 
-/** Theme → `--sbx-*` custom properties for the root element's inline style. */
 export function themeToVars(theme: Theme): CSSProperties {
     const c = theme.colors;
     const s = theme.syntax;
@@ -147,7 +144,6 @@ export function themeToVars(theme: Theme): CSSProperties {
     } as CSSProperties;
 }
 
-/** Component stylesheet — sandpack-flavored: surfaces, thin borders, accent tab bar. */
 export const STYLES = `
 .sbx-root { --sbx-height: 340px; display:block; border:1px solid var(--sbx-surface-2); border-radius:8px;
   overflow:hidden; background:var(--sbx-surface-1); color:var(--sbx-base);
@@ -185,7 +181,6 @@ export const STYLES = `
 
 const STYLE_ID = 'sbx-styles';
 
-/** Inject the component stylesheet once. Safe to call repeatedly + on SSR. */
 export function injectStyles(doc: Document | undefined = typeof document === 'undefined' ? undefined : document): void {
     if (!doc || doc.getElementById(STYLE_ID)) return;
     const el = doc.createElement('style');

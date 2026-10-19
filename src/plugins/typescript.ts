@@ -3,7 +3,7 @@ import { extname, type Plugin } from '../core/plugin.ts';
 
 const TS = new Set(['.ts', '.tsx', '.mts', '.cts']);
 
-/** strip typescript with oxc. jsx is preserved for `jsx()` / `react()` to lower. */
+/** jsx is preserved for `jsx()` / `react()` to lower. */
 export function typescript(): Plugin {
     return {
         name: 'typescript',

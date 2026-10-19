@@ -1,6 +1,5 @@
 import type { Plugin } from '../core/plugin.ts';
 
-/** `import data from './a.json'` → the parsed value as the default export. */
 export function json(): Plugin {
     return {
         name: 'json',

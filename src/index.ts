@@ -1,5 +1,4 @@
-// @pmndrs/sandbox — core entry (framework-agnostic).
-// oxc transforms on the host page; vite's module runner (alone) in the iframe.
+// oxc transforms on the host page; only vite's module runner runs in the iframe.
 
 export { createDevServer, type DevServer, type DevServerOptions, type Session } from './core/dev-server.ts';
 export type { Mount, MountOptions } from './core/mount.ts';
@@ -16,7 +15,6 @@ export { type FileContent, type Fs, type MemoryFs, memoryFs } from './core/fs.ts
 export { loadOxc, type Oxc, OXC_WASM_URL, type OxcWasm } from './core/oxc.ts';
 export type { Client, FetchOptions, FetchResult, SessionCore } from './core/session.ts';
 
-// plugins
 export { typescript } from './plugins/typescript.ts';
 export { jsx, type JsxOptions } from './plugins/jsx.ts';
 export { react, REACT_REFRESH_ID, type ReactOptions } from './plugins/react.ts';
@@ -25,7 +23,6 @@ export { json } from './plugins/json.ts';
 export { assets } from './plugins/assets.ts';
 export { dependencies, type DependenciesOptions, importMap } from './plugins/dependencies.ts';
 
-// the batteries-included preset (what the react layer drives)
 export { createSandbox, type Sandbox } from './core/sandbox.ts';
 export {
     inferEntry,
@@ -36,7 +33,6 @@ export {
     withTemplate,
 } from './core/templates.ts';
 
-// dependencies (esm.sh)
 export {
     buildImportMap,
     DEFAULT_CDN,

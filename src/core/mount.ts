@@ -6,17 +6,15 @@ import type { Client, FetchOptions, SessionCore } from './session.ts';
 import type { Path } from './types.ts';
 
 export type MountOptions = {
-    /** the iframe to run in. */
     into: HTMLIFrameElement;
     /** custom body html; defaults to `<div id="root"></div>`. */
     bodyHtml?: string;
 };
 
-/** one entry running in one iframe. */
 export type Mount = {
     readonly entry: Path;
     readonly events: Emitter<MountEvent>;
-    /** reload the iframe from scratch (fresh realm, fresh module graph). */
+    /** fresh realm, fresh module graph. */
     reload(): void;
     dispose(): void;
 };
@@ -28,13 +26,12 @@ type InvokeData = { name: string; data: unknown[] };
 export function createMount(core: SessionCore, entry: Path, options: MountContext): Mount {
     const iframe = options.into;
     const events = createEmitter<MountEvent>();
-    /** lines the runner's evaluator wraps around module code (reported on every fetch). */
+    // lines the runner's evaluator wraps around module code; reported on every fetch.
     let startOffset = 0;
     let disposed = false;
 
     const send = (msg: HostMessage): void => iframe.contentWindow?.postMessage(msg, '*');
 
-    /** map an error's `sandbox://` frames to original sources; keep a known `loc`. */
     const mapError = (error: ErrorInfo): ErrorInfo => {
         if (!error.stack) return error;
         const { stack, loc } = core.mapStack(error.stack, startOffset);

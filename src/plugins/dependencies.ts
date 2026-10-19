@@ -3,14 +3,11 @@ import type { Plugin } from '../core/plugin.ts';
 import type { Dependencies } from '../core/types.ts';
 
 export type DependenciesOptions = EsmShOptions & {
-    /** bare imports that aren't declared: fetch latest from esm.sh (default), or fail. */
+    /** undeclared bare imports: fetch latest from esm.sh (default), or fail. */
     undeclared?: 'esm.sh' | 'error';
 };
 
-/**
- * npm deps via esm.sh: declared deps go in the preview's import map (one shared
- * react); undeclared bare imports resolve straight to an esm.sh url.
- */
+/** declared deps go in the import map (so one shared react); undeclared bare imports resolve straight to esm.sh. */
 export function dependencies(deps: Dependencies, options: DependenciesOptions = {}): Plugin {
     const esm = { dev: true, ...options };
     return {
@@ -23,7 +20,6 @@ export function dependencies(deps: Dependencies, options: DependenciesOptions = 
     };
 }
 
-/** a fixed import map, e.g. `{ imports: { three: 'https://…/three.module.js' } }`. */
 export function importMap(map: ImportMap): Plugin {
     return { name: 'import-map', importMap: () => map };
 }

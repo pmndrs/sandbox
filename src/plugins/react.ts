@@ -2,20 +2,15 @@ import type { Plugin } from '../core/plugin.ts';
 import { jsx } from './jsx.ts';
 
 export type ReactOptions = {
-    /** react fast refresh (default true). needs dev builds of react in the import map. */
+    /** default true. needs dev builds of react in the import map. */
     refresh?: boolean;
-    /** automatic-runtime import source (default `react`). */
     importSource?: string;
 };
 
-/** the refresh helpers, served as a virtual module through the runner. */
 export const REACT_REFRESH_ID = '/@react-refresh';
 
-/**
- * vite-plugin-react's refresh helpers over `react-refresh/runtime` (adapted from
- * parcel's `helpers.js`, itself from metro). `react-refresh/runtime` stays a bare
- * import → the import map, so this and the preamble share one instance.
- */
+// adapted from vite-plugin-react's refresh helpers. `react-refresh/runtime` stays a bare
+// import (→ the import map) so this and the preamble share one instance.
 const RUNTIME = `import * as Refresh from 'react-refresh/runtime';
 
 // a single edit refreshes at once; a burst is coalesced.
@@ -98,19 +93,14 @@ export function validateRefreshBoundaryAndEnqueueUpdate(id, prevExports, nextExp
 }
 `;
 
-/** runs before any app module: patch react's devtools hook, install no-op globals. */
 const PREAMBLE = `import { injectIntoGlobalHook } from 'react-refresh/runtime';
 injectIntoGlobalHook(window);
 window.$RefreshReg$ = () => {};
 window.$RefreshSig$ = () => (type) => type;
 `;
 
-/**
- * wrap a refresh-instrumented module (vite-plugin-react / rolldown's wrapper):
- * module-local `$RefreshReg$`/`$RefreshSig$` keyed by the module id, plus a
- * self-accept that re-validates the boundary on every update. `__vite_ssr_exports__`
- * is the module runner's exports object for this evaluation.
- */
+// mirrors vite-plugin-react's wrapper. `__vite_ssr_exports__` is the module runner's
+// exports object for this evaluation; the self-accept re-validates the boundary each update.
 function wrap(code: string, id: string): string {
     const key = JSON.stringify(id);
     return `${header(id)}${code}
@@ -133,10 +123,10 @@ const $RefreshReg$ = (type, name) => RefreshRuntime.register(type, ${JSON.string
 const $RefreshSig$ = RefreshRuntime.createSignatureFunctionForTransform;
 `;
 
-/** the header adds whole lines, so the map just shifts down by that many. */
+// the header adds whole lines, so the map just shifts down by that many.
 const HEADER_LINES = ';'.repeat(header('').split('\n').length - 1);
 
-/** react: jsx lowering + fast refresh. put after `typescript()`. */
+/** jsx lowering + fast refresh. put after `typescript()`. */
 export function react(options: ReactOptions = {}): Plugin {
     const refresh = options.refresh ?? true;
     const lower = jsx({ importSource: options.importSource, refresh });

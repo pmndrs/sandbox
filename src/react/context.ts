@@ -5,17 +5,14 @@ import type { Theme } from './theme.ts';
 
 export type SandboxContextValue = {
     sandbox: Sandbox;
-    /** files shown as tabs (posix paths, minus synthetic ones). */
     files: string[];
     activeFile: string;
     setActiveFile: (path: string) => void;
-    /** resolved theme (for the editor to build its Monaco theme). */
     theme: Theme;
 };
 
 export const SandboxContext = createContext<SandboxContextValue | null>(null);
 
-/** The escape hatch — the core handle + view state. */
 export function useSandbox(): SandboxContextValue {
     const ctx = useContext(SandboxContext);
     if (!ctx) throw new Error('useSandbox must be used inside <SandboxProvider>');
@@ -24,7 +21,7 @@ export function useSandbox(): SandboxContextValue {
 
 const textOf = (content: unknown): string => (typeof content === 'string' ? content : '');
 
-/** The active file's code, kept in sync with the fs; `setCode` writes through → HMR. */
+/** `setCode` writes through to the fs, so it triggers hmr. */
 export function useActiveFile(): { path: string; code: string; setCode: (next: string) => void } {
     const { sandbox, activeFile } = useSandbox();
     const [code, setCode] = useState(() => textOf(sandbox.fs.read(activeFile)));
@@ -44,7 +41,6 @@ export function useActiveFile(): { path: string; code: string; setCode: (next: s
     return { path: activeFile, code, setCode: write };
 }
 
-/** Subscribe to live runner messages (console / errors / hmr / ready). */
 export function useSandboxMessages(onMessage: (message: MountEvent) => void): void {
     const { sandbox } = useSandbox();
     useEffect(() => sandbox.messages.subscribe(onMessage), [sandbox, onMessage]);

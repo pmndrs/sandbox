@@ -4,14 +4,12 @@ import type { Path } from './types.ts';
 
 export type Resolved = { id: Path; external: boolean };
 
-/** probed, in order, for extensionless relative imports. */
 const EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.json'];
 
 const isUrl = (spec: string): boolean => /^[a-z][a-z0-9+.-]*:/i.test(spec);
 
 const dirname = (id: Path): Path => id.slice(0, id.lastIndexOf('/') + 1) || '/';
 
-/** posix-join + normalize `.`/`..` segments. */
 function join(base: Path, rel: string): Path {
     const out: string[] = [];
     for (const part of `${base}/${rel}`.split('/')) {
@@ -22,11 +20,7 @@ function join(base: Path, rel: string): Path {
     return `/${out.join('/')}`;
 }
 
-/**
- * specifier → module id. plugins first; then bare specifiers must be in the
- * import map (external: the preview imports them natively), urls are external,
- * and local paths are probed against the fs (keeping any `?query`).
- */
+/** bare specifiers must be in the import map: they're external, imported natively by the preview. */
 export function createResolver(plugins: Plugin[], ctx: PluginContext) {
     return async function resolve(specifier: string, importer: Path | undefined): Promise<Resolved> {
         for (const plugin of plugins) {

@@ -2,12 +2,8 @@ import type { ImportMap } from './esm-sh.ts';
 import { CLIENT_SOURCE } from './generated/client.ts';
 import type { ClientConfig } from './protocol.ts';
 
-/**
- * the client bundle, delivered to the iframe as a blob url created once and
- * reused across every preview. the iframe is a same-origin `srcdoc`, so it can
- * load this host-origin blob; one url keeps each `srcdoc` tiny and lets the
- * browser reuse the parse.
- */
+// the same-origin `srcdoc` iframe can load a host-origin blob url; one shared url keeps
+// each `srcdoc` tiny and lets the browser reuse the parse.
 let clientBlobUrl: string | undefined;
 function clientUrl(): string {
     if (clientBlobUrl === undefined) {
@@ -18,21 +14,16 @@ function clientUrl(): string {
 
 export type PreviewHtmlOptions = {
     importMap: ImportMap;
-    /** module sources run before the client (in order). */
+    /** run before the client, in order. */
     preambles: string[];
     config: ClientConfig;
-    /** custom body; defaults to a `#root` mount point. */
     bodyHtml?: string;
 };
 
 /** json inside a `<script>` must not be able to close it. */
 const scriptJson = (value: unknown): string => JSON.stringify(value).replace(/</g, '\\u003c');
 
-/**
- * the preview document: import map + plugin preambles + the client. module
- * scripts run in document order, so every preamble finishes before the client
- * imports the entry.
- */
+// module scripts run in document order, so every preamble finishes before the client imports the entry.
 export function buildPreviewHtml(options: PreviewHtmlOptions): string {
     const preambles = options.preambles.map((code) => `<script type="module">${code}</script>\n`).join('');
     return `<!doctype html>

@@ -13,7 +13,6 @@ import { typescript } from '../src/plugins/typescript.ts';
 import { createTestRunner, oxc } from './harness.ts';
 
 let binding: Oxc;
-/** `<style>` tags css() appended to the fake document. */
 const head: { text: string; attrs: Record<string, string> }[] = [];
 beforeAll(async () => {
     binding = await oxc();

@@ -7,47 +7,38 @@ import { runnerTransform } from './runner-transform.ts';
 import { composeMaps, createStackMapper, inlineMap } from './sourcemap.ts';
 import type { Path } from './types.ts';
 
-/** what `fetchModule` hands vite's module runner. */
 export type FetchResult =
     | { externalize: string; type: 'module' }
     | { cache: true }
     | { code: string; file: Path; id: Path; url: Path; invalidate: boolean };
 
-/** the runner's `fetchModule` options. `startOffset`: lines its evaluator wraps around the code. */
+/** `startOffset`: lines the runner's evaluator wraps around the code. */
 export type FetchOptions = { cached?: boolean; startOffset?: number };
 
-/** one consumer of the session's modules — a mounted iframe (or a test runner). */
 export type Client = {
-    /** ids this client has fetched; only these get hot updates. */
     readonly loaded: Set<Path>;
-    /** ids whose next fetch must re-evaluate (marked by propagation). */
     readonly stale: Set<Path>;
     /** a module failed on first load: the runner's graph is half-built, so any change reloads. */
     failed: boolean;
-    /** deliver an hmr outcome (an `update` payload, or a reload). */
     hot(update: HmrUpdate, payload: unknown): void;
 };
 
 export type SessionCore = {
     fetchModule(client: Client, specifier: string, importer?: Path, options?: FetchOptions): Promise<FetchResult>;
-    /** a file changed: re-transform on demand and hot-update every client. */
     update(path: Path): void;
-    /** `import.meta.hot.invalidate()` from a client: propagate past `path`. */
+    /** `import.meta.hot.invalidate()`: propagates from `path`'s importers. */
     invalidate(client: Client, path: Path): void;
-    /** rewrite a stack's `sandbox://` frames to original source positions. */
     mapStack(stack: string, startOffset?: number): { stack: string; loc?: ErrorLoc };
     preambles(): string[];
     addClient(client: Client): () => void;
 };
 
-/** a transformed module, cached until its file changes. */
 type Transformed = { code: string; map: SourceMap | null };
 
 export function createSessionCore(plugins: Plugin[], ctx: PluginContext): SessionCore {
     const graph = createGraph();
     const cache = new Map<Path, Promise<Transformed>>();
     const stacks = createStackMapper();
-    /** fs path → module ids reading it (`/a.svg` → `/a.svg`, `/a.svg?raw`). */
     const idsByPath = new Map<Path, Set<Path>>();
     const clients = new Set<Client>();
 
@@ -67,7 +58,7 @@ export function createSessionCore(plugins: Plugin[], ctx: PluginContext): Sessio
     async function transform(id: Path): Promise<Transformed> {
         const original = await load(id);
 
-        // plugin transforms, collecting each step's map (one missing map breaks the chain).
+        // one missing map breaks the chain.
         let code = original;
         let maps: SourceMap[] | null = [];
         for (const plugin of plugins) {
@@ -126,18 +117,17 @@ export function createSessionCore(plugins: Plugin[], ctx: PluginContext): Sessio
         return pending;
     }
 
-    /** tell clients about modules nothing imports any more; a later re-import re-evaluates them. */
     function prune(orphans: Path[]): void {
         // the graph forgot them; drop the transforms too, so a re-import re-registers edges.
         for (const id of orphans) cache.delete(id);
         for (const client of clients) {
             const paths = orphans.filter((id) => client.loaded.delete(id));
+            // so a later re-import re-evaluates them.
             for (const id of paths) client.stale.add(id);
             if (paths.length > 0) client.hot({ type: 'prune', paths }, { type: 'prune', paths });
         }
     }
 
-    /** turn a propagation into what one client should do. */
     function deliver(client: Client, propagation: Propagation): void {
         if (propagation === null) {
             client.hot({ type: 'full-reload' }, { type: 'full-reload' });
@@ -170,6 +160,7 @@ export function createSessionCore(plugins: Plugin[], ctx: PluginContext): Sessio
             client.stale.delete(id);
             client.loaded.add(id);
             const code = inlineMap(transformed.code, id, transformed.map, options.startOffset ?? 0);
+            // without `invalidate`, the runner reuses its already-evaluated instance.
             return { code, file: id, id, url: id, invalidate: stale };
         },
         update(path) {

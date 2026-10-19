@@ -1,6 +1,4 @@
-// Bundle the preview iframe client (src/core/client/client.ts + vite's module
-// runner) into ONE self-contained ESM string, written to
-// src/core/generated/client.ts as `CLIENT_SOURCE`.
+// bundles the preview iframe client + vite's module runner into one self-contained esm string.
 import { writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { nodeResolve } from '@rollup/plugin-node-resolve';

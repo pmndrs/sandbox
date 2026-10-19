@@ -17,7 +17,6 @@ import type { ErrorLoc } from './protocol.ts';
  * which is why this needs scope analysis rather than a lexer.
  */
 
-/** an estree node, walked generically. */
 type Node = any;
 
 const IMPORT = '__vite_ssr_import__';
@@ -27,11 +26,7 @@ const EXPORT_NAME = '__vite_ssr_exportName__';
 const IMPORT_META = '__vite_ssr_import_meta__';
 const EXPORT_DEFAULT = '__vite_ssr_export_default__';
 
-/**
- * rewrite `code` for the module runner. `resolve` maps each import specifier to
- * the id written into the output (so the runner, which caches by url, sees one
- * url per module). syntax errors throw with a codeframe and a `loc` into `code`.
- */
+/** syntax errors throw with a codeframe and a `loc` into `code`. */
 export async function runnerTransform(
     code: string,
     id: string,
@@ -40,7 +35,6 @@ export async function runnerTransform(
     const ast = parseModule(code, id);
     const s = new MagicString(code);
 
-    // resolve every literal specifier (static imports are top-level; literal `import()`s anywhere).
     const specifiers = new Set<string>();
     const dynamicImports: Node[] = [];
     for (const node of ast.body) if (node.source) specifiers.add(node.source.value);
@@ -88,7 +82,6 @@ export async function runnerTransform(
         }
     }
 
-    // imports (and re-exports' imports) hoist to the top, in order.
     for (const node of imports) {
         if (node.type === 'ExportNamedDeclaration') {
             if (node.source) {
@@ -124,7 +117,7 @@ export async function runnerTransform(
         }
     }
 
-    // exports become getters on the exports object, defined up front (so cycles see them).
+    // export getters are defined up front so cycles see them.
     for (const node of exports) {
         if (node.type === 'ExportNamedDeclaration') {
             if (node.declaration) {
@@ -224,7 +217,6 @@ export async function runnerTransform(
     return { code: s.toString(), map: { ...map, file: id } as SourceMap };
 }
 
-/** acorn, as a module. a syntax error throws with a codeframe and `loc`. */
 function parseModule(code: string, id: string): Node {
     try {
         return parse(code, { ecmaVersion: 'latest', sourceType: 'module', allowHashBang: true });
@@ -250,7 +242,6 @@ function codeframe(code: string, offset: number): string {
 
 const nameOf = (node: Node): string => (node.type === 'Identifier' ? node.name : node.value);
 
-/** every name a declaration pattern binds. */
 function patternNames(pattern: Node): string[] {
     switch (pattern.type) {
         case 'Identifier':
@@ -268,7 +259,6 @@ function patternNames(pattern: Node): string[] {
     }
 }
 
-/** depth-first over every child node; `enter` returning false skips the subtree (and its `leave`). */
 function traverse(
     node: Node,
     parent: Node,
@@ -297,10 +287,7 @@ type Visitors = {
 const patternNodes = new WeakSet<Node>();
 const isNodeInPattern = (node: Node): boolean => patternNodes.has(node);
 
-/**
- * scope-aware walk (vite's, after @vue/compiler-core): reports each identifier
- * that references a module-scope binding — i.e. isn't shadowed by a local.
- */
+/** vite's scope walk (after @vue/compiler-core): reports identifiers not shadowed by a local binding. */
 function walk(root: Node, { onIdentifier, onImportMeta, onDynamicImport, onStatements }: Visitors): void {
     const parentStack: Node[] = [];
     const varKindStack: string[] = [];
@@ -391,15 +378,11 @@ const isStaticProperty = (node: Node): boolean => node.type === 'Property' && !n
 
 const isFunction = (node: Node): boolean => /Function(?:Expression|Declaration)$|Method$/.test(node.type);
 
-/**
- * children that must not see `parent` as a scope: else-branches (acorn nests
- * them in the `if`), and a switch's discriminant (evaluated outside the cases).
- */
+// else-branches (acorn nests them in the `if`) and a switch's discriminant (evaluated outside the cases) aren't in its scope.
 const isSkippedParent = (node: Node, parent: Node): boolean =>
     (parent.type === 'IfStatement' && node === parent.alternate) ||
     (parent.type === 'SwitchStatement' && node === parent.discriminant);
 
-/** the nearest block (or, for `var`, function) scope. */
 const findParentScope = (parentStack: Node[], isVar = false): Node =>
     parentStack.find((node) =>
         isVar ? isFunction(node) : /^BlockStatement$|^SwitchStatement$|^For(?:In|Of)?Statement$/.test(node.type),

@@ -11,7 +11,7 @@ beforeAll(async () => {
     binding = await oxc();
 });
 
-/** evaluate `/main.js` (plain js: the runner transform is the only step). */
+/** plain js, so the runner transform is the only step. */
 async function run(files: Files) {
     const core = (await createDevServer({ fs: memoryFs(files), plugins: [importMap({ imports: { ext: 'ext' } })], oxc: binding }).open()).core;
     return createTestRunner(core, { ext: { x: 'external' } }).runner.import('/main.js');

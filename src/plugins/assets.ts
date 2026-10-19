@@ -1,6 +1,5 @@
 import { cleanId, type Plugin, queryOf } from '../core/plugin.ts';
 
-/** extension → mime type, for the blob urls assets are served from. */
 const MIME: Record<string, string> = {
     png: 'image/png',
     jpg: 'image/jpeg',
@@ -31,13 +30,8 @@ const MIME: Record<string, string> = {
 
 const extOf = (path: string): string => path.slice(path.lastIndexOf('.') + 1).toLowerCase();
 
-/**
- * files as urls. `import logo from './logo.png'` (or any `?url`) → a blob url
- * for the file's bytes; `import text from './a.glsl?raw'` → its text. the
- * preview is a same-origin srcdoc, so it can load the host page's blob urls.
- */
+/** known binary extensions and `?url` → blob url, `?raw` → text. works because the preview is a same-origin srcdoc. */
 export function assets(): Plugin {
-    /** id → its current blob url. a load only re-runs after the file changed, so the old url is done. */
     const urls = new Map<string, string>();
     const revoke = (id: string): void => {
         const url = urls.get(id);
@@ -56,7 +50,7 @@ export function assets(): Plugin {
                 const text = typeof content === 'string' ? content : new TextDecoder().decode(content);
                 return `export default ${JSON.stringify(text)};\n`;
             }
-            // revoking doesn't unload what's already displayed; the importers re-run with the new url.
+            // a load only re-runs after a change. revoking doesn't unload what's displayed; importers re-run with the new url.
             revoke(id);
             const blob = new Blob([content as BlobPart], { type: MIME[extOf(path)] ?? 'application/octet-stream' });
             const url = URL.createObjectURL(blob);

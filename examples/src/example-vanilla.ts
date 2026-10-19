@@ -1,7 +1,6 @@
 import { createDevServer, css, memoryFs, typescript } from '@pmndrs/sandbox';
 
-// The bare core: an fs, a plugin list, a session, a mount — no React layer. `source(label)` builds a DOM counter; string-concatenated to
-// keep it free of nested template literals.
+// string-concatenated to avoid nested template literals.
 const source = (label: string): string =>
     [
         "import './style.css';",

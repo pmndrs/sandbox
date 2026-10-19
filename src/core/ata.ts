@@ -1,20 +1,15 @@
 import { DEFAULT_CDN } from './esm-sh.ts';
 import type { Dependencies } from './types.ts';
 
-/** a virtual `.d.ts` (or package.json) to register in the editor's ts worker. */
 export type TypeFile = { path: string; content: string };
 
-/** the result of acquiring types for a dep set — a virtual node_modules for the editor. */
 export type TypeAcquisition = { files: TypeFile[] };
 
-// ── ATA: crawl the esm.sh .d.ts closure into a virtual node_modules ──────────
-
-// Module-level caches, shared across acquisitions in a page session (switching
-// examples / re-mounting reuses already-fetched types instead of refetching).
+// module-level so remounts / example switches reuse already-fetched types.
 const typesUrlCache = new Map<string, string | null>();
 const dtsCache = new Map<string, string | null>();
 
-/** The `X-TypeScript-Types` .d.ts URL for a package, or null if it ships none. */
+// esm.sh advertises a package's .d.ts url via the `x-typescript-types` header.
 async function typesUrl(jsUrl: string): Promise<string | null> {
     const cached = typesUrlCache.get(jsUrl);
     if (cached !== undefined) return cached;
@@ -29,7 +24,6 @@ async function typesUrl(jsUrl: string): Promise<string | null> {
     return result;
 }
 
-/** Fetch a .d.ts (cached; null on failure/404). */
 async function fetchText(url: string): Promise<string | null> {
     const cached = dtsCache.get(url);
     if (cached !== undefined) return cached;
@@ -44,10 +38,9 @@ async function fetchText(url: string): Promise<string | null> {
     return text;
 }
 
-/** Strip the CDN origin + `*` (all-external) marker from an esm.sh URL. */
+// `*` is esm.sh's all-external marker.
 const stripCdn = (url: string): string => url.replace(/^https?:\/\/[^/]+\//, '').replace(/^\*/, '');
 
-/** Split `@scope/name@ver/rest` → package (with version) + the remaining subpath. */
 function splitPkg(rel: string): { pkgWithVer: string; rest: string } {
     const scoped = rel.startsWith('@');
     const s1 = rel.indexOf('/');
@@ -56,26 +49,24 @@ function splitPkg(rel: string): { pkgWithVer: string; rest: string } {
     return { pkgWithVer: rel.slice(0, end), rest: rel.slice(end + 1) };
 }
 
-/** `@types/react` → `react`, `@types/scope__name` → `@scope/name`: types live under the package they type. */
+// types live under the package they type: `@types/react` → `react`, `@types/scope__name` → `@scope/name`.
 function canonicalPkg(name: string): string {
     if (!name.startsWith('@types/')) return name;
     const bare = name.slice('@types/'.length);
     return bare.includes('__') ? `@${bare.replace('__', '/')}` : bare;
 }
 
-/** Package name of an esm.sh URL, canonicalized (`@types/react` → `react`, `@react-three/fiber`). */
 function pkgNameOf(url: string): string {
     const { pkgWithVer } = splitPkg(stripCdn(url));
     const at = pkgWithVer.lastIndexOf('@');
     return canonicalPkg(at > 0 ? pkgWithVer.slice(0, at) : pkgWithVer);
 }
 
-/** Package-relative subpath of a .d.ts URL (esm.sh's `X-<base64>` build segment stripped). */
+// esm.sh inserts an `X-<base64>` build segment after the package.
 function subpathOf(url: string): string {
     return splitPkg(stripCdn(url)).rest.replace(/^X-[^/]+\//, '');
 }
 
-/** `import`/`export … from`/dynamic-`import()` specifiers — these get rewritten. */
 function importSpecs(content: string): string[] {
     const out = new Set<string>();
     for (const m of content.matchAll(/(?:from|import|export)\s*['"]([^'"]+)['"]/g)) out.add(m[1]);
@@ -85,14 +76,12 @@ function importSpecs(content: string): string[] {
     return [...out];
 }
 
-/** Triple-slash `/// <reference path|types>` targets — kept verbatim (TS resolves them literally). */
 function referenceSpecs(content: string): string[] {
     const out = new Set<string>();
     for (const m of content.matchAll(/\/\/\/\s*<reference\s+(?:path|types)\s*=\s*['"]([^'"]+)['"]/g)) out.add(m[1]);
     return [...out];
 }
 
-/** Drop a `.d.ts` (or `.d.mts`/`.d.cts`) extension so TS resolution finds the file. */
 const dropDtsExt = (spec: string): string => spec.replace(/\.d\.[mc]?ts$/, '');
 
 const replaceSpec = (content: string, from: string, to: string): string =>
@@ -100,8 +89,6 @@ const replaceSpec = (content: string, from: string, to: string): string =>
 
 type Job = { url: string; ownerPkg: string };
 
-/** Fetch + rewrite ONE .d.ts; enqueue the modules it references (no recursion — the
- *  pool drains the queue). Returns the virtual file, or null on a fetch miss. */
 async function processOne(
     url: string,
     ownerPkg: string,
@@ -111,13 +98,11 @@ async function processOne(
     if (content === null) return null;
     const vfsPath = `file:///node_modules/${ownerPkg}/${subpathOf(url)}`;
 
-    // triple-slash references: register the target, keep the specifier verbatim.
+    // ts resolves triple-slash references literally, so their specifiers stay verbatim.
     for (const spec of referenceSpecs(content)) {
         if (spec.startsWith('.')) enqueue(new URL(spec, url).href, ownerPkg);
     }
-    // imports: register + REWRITE so TS resolution finds them — strip the `.d.ts`
-    // extension (TS won't resolve `from "./x.d.ts"`), and map cross-package esm.sh
-    // URLs to a bare path under their own package.
+    // ts won't resolve `from "./x.d.ts"`, and cross-package esm.sh urls must map to a bare path.
     for (const spec of importSpecs(content)) {
         if (spec.startsWith('.')) {
             enqueue(new URL(spec, url).href, ownerPkg);
@@ -134,11 +119,10 @@ async function processOne(
     return { path: vfsPath, content };
 }
 
-/** Fetch this many .d.ts in parallel; ceiling guards a pathological closure (three's is large). */
+// the file ceiling guards a pathological closure (three's is large).
 const ATA_CONCURRENCY = 24;
 const ATA_MAX_FILES = 2000;
 
-/** fetch the `.d.ts` closure for `dependencies` off esm.sh, as a virtual node_modules for the editor. */
 export async function acquireTypes(dependencies: Dependencies, cdn = DEFAULT_CDN): Promise<TypeAcquisition> {
     const files: TypeFile[] = [];
     const seen = new Set<string>();
@@ -159,11 +143,10 @@ export async function acquireTypes(dependencies: Dependencies, cdn = DEFAULT_CDN
             path: `file:///node_modules/${name}/package.json`,
             content: JSON.stringify({ name, types: `./${subpathOf(dts)}` }),
         });
-        enqueue(dts, name); // ownerPkg = the DEP name (remaps @types/react → react)
+        enqueue(dts, name); // owner is the dep name, so @types/react types land under react
     }
 
-    // Concurrent drain of the growing queue — three's tree is hundreds of files, so
-    // sequential fetching never finishes; a fixed-size pool keeps it a few seconds.
+    // three's tree is hundreds of files: sequential fetching never finishes, a fixed pool takes seconds.
     let active = 0;
     await new Promise<void>((resolve) => {
         const pump = (): void => {

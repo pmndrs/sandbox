@@ -1,7 +1,5 @@
-// the iframe client. runs INSIDE the preview: vite's module runner (pulled in
-// alone, no vite server) fetches modules from the host over postMessage and
-// evaluates them; bare imports go native → the page's import map. bundled into
-// one string by scripts/build-client.mjs and loaded from a blob url.
+// runs inside the preview iframe; bundled into a string by scripts/build-client.mjs.
+// bare imports bypass the runner and go native through the page's import map.
 
 import { createDefaultImportMeta, ESModulesEvaluator, ModuleRunner } from 'vite/module-runner';
 import { type ClientConfig, type ClientMessage, type ErrorLoc, type HotPayload, isHostMessage, SBX } from '../protocol.ts';
@@ -18,7 +16,6 @@ const serialize = (a: unknown): string => {
     }
 };
 
-/** apply console format directives (`%s %d %i %f %o %O %c`) like the devtools console does. */
 const format = (args: unknown[]): unknown[] => {
     if (typeof args[0] !== 'string' || !args[0].includes('%')) return args;
     const rest = args.slice(1);
@@ -39,7 +36,6 @@ const reportError = (err: unknown): void => {
     post({ src: SBX, type: 'runtime-error', message: e.message ?? String(err), stack: e.stack, loc: e.loc });
 };
 
-// forward console + uncaught errors to the host.
 for (const level of ['log', 'info', 'warn', 'error', 'debug'] as const) {
     const original = console[level].bind(console);
     console[level] = (...args: unknown[]) => {
@@ -52,7 +48,6 @@ addEventListener('unhandledrejection', (e) => reportError(e.reason));
 
 const config = JSON.parse(document.getElementById('sbx-config')?.textContent ?? '{}') as ClientConfig;
 
-// ── transport: vite's `invoke` / `connect` / `send` over postMessage ──────────
 let nextId = 0;
 const pending = new Map<number, { resolve: (v: { result: unknown } | { error: unknown }) => void }>();
 let onHot: ((payload: HotPayload) => void) | undefined;
