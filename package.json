@@ -1,0 +1,59 @@
+{
+    "name": "@pmndrs/sandbox",
+    "version": "0.0.0",
+    "private": true,
+    "type": "module",
+    "description": "Beautiful, embeddable JavaScript code sandboxes",
+    "sideEffects": [
+        "**/*.css"
+    ],
+    "exports": {
+        ".": "./src/index.ts",
+        "./react": "./src/react/index.ts"
+    },
+    "scripts": {
+        "build:client": "node scripts/build-client.mjs",
+        "test": "vitest run",
+        "typecheck": "tsc --noEmit",
+        "format": "biome format --write .",
+        "lint": "biome check .",
+        "dev:examples": "pnpm --filter @pmndrs/sandbox-examples dev",
+        "build:examples": "pnpm --filter @pmndrs/sandbox-examples build"
+    },
+    "peerDependencies": {
+        "react": ">=18",
+        "react-dom": ">=18"
+    },
+    "peerDependenciesMeta": {
+        "react": {
+            "optional": true
+        },
+        "react-dom": {
+            "optional": true
+        }
+    },
+    "dependencies": {
+        "@jridgewell/remapping": "2.3.5",
+        "@jridgewell/trace-mapping": "0.3.31",
+        "@monaco-editor/react": "^4.7.0",
+        "@oxc-transform/binding-wasm32-wasip1": "0.154.0",
+        "acorn": "8.15.0",
+        "magic-string": "0.30.21",
+        "monaco-editor": "^0.54.0",
+        "oxc-transform": "0.154.0"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "^2.5.6",
+        "@rollup/plugin-node-resolve": "^16.0.3",
+        "@types/react": "^19.0.0",
+        "@types/react-dom": "^19.0.0",
+        "esbuild": "^0.28.2",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0",
+        "rollup": "^4.63.1",
+        "rollup-plugin-esbuild": "^6.2.1",
+        "typescript": "^5.7.0",
+        "vite": "^8.2.2",
+        "vitest": "^4.1.10"
+    }
+}

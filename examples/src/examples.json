@@ -1,0 +1,17 @@
+{
+    "example-react-three-fiber": {
+        "title": "React Three Fiber",
+        "category": "react",
+        "source": "example-react-three-fiber.tsx"
+    },
+    "example-react-counter": {
+        "title": "React Counter",
+        "category": "react",
+        "source": "example-react-counter.tsx"
+    },
+    "example-vanilla": {
+        "title": "Vanilla (core)",
+        "category": "core",
+        "source": "example-vanilla.ts"
+    }
+}

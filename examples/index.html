@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@pmndrs/sandbox examples</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--color-background);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+            --color-background: #131518;
+            --color-card: #1c1f25;
+            --color-border: rgba(255, 255, 255, 0.1);
+            --color-viewer: #0e0f12;
+            --color-ink: #e8eaed;
+            --color-glass: rgba(22, 25, 31, 0.72);
+            --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+        }
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            max-width: 320px;
+            background: var(--color-background);
+            color: var(--color-ink);
+            overflow-y: auto;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.15);
+            scrollbar-width: none;
+        }
+
+        .sidebar::-webkit-scrollbar { display: none; }
+        .sidebar.open { transform: translateX(0); }
+
+        .sidebar-top { position: sticky; top: 0; z-index: 2; background: var(--color-background); }
+        .sidebar-header { padding: 18px 14px 10px; }
+        .sidebar-header h1 { margin: 0; font-family: var(--mono); font-size: 24px; font-weight: 700; }
+        .search-container { margin: 0; padding: 0 14px 12px; }
+
+        .search-input {
+            width: 100%;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 0;
+            padding: 9px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--color-ink);
+            font-size: 11px;
+            font-family: var(--mono);
+            box-sizing: border-box;
+        }
+
+        .search-input::placeholder { color: #7d848c; }
+        .search-input:focus { outline: none; border-color: rgba(255, 255, 255, 0.28); }
+
+        .examples-list { padding: 10px 14px 16px; margin: 0; list-style: none; }
+        .category-group { margin-bottom: 22px; }
+        .category-group.hidden { display: none; }
+
+        .category-header {
+            font-family: var(--mono);
+            font-size: 11px;
+            letter-spacing: 0.04em;
+            text-transform: lowercase;
+            color: #8a95a1;
+            margin: 0 0 10px 0;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .example-card { margin-bottom: 8px; list-style: none; }
+
+        .example-item {
+            display: block;
+            padding: 9px 12px;
+            background-color: var(--color-card);
+            color: #cfd8dc;
+            text-decoration: none;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            font-family: var(--mono);
+            font-size: 13px;
+            text-transform: lowercase;
+            transition: border-color 0.16s ease;
+        }
+
+        .example-item:hover { border-color: rgba(255, 255, 255, 0.5); }
+        .example-item.active { border-color: #fff; color: #fff; }
+
+        .rainbow-text {
+            background-image: linear-gradient(90deg, #ff3ea5, #ffd23f, #3fa7ff, #8a2be2, #ff3ea5);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: slide 2s linear infinite;
+        }
+
+        @keyframes slide { from { background-position: 0% center; } to { background-position: -200% center; } }
+        @media (prefers-reduced-motion: reduce) { .rainbow-text { animation: none; } }
+
+        .content { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 24px; gap: 14px; }
+
+        .content-header { display: flex; align-items: center; gap: 12px; }
+        .hamburger { display: block; background: none; border: none; font-size: 18px; cursor: pointer; color: var(--color-ink); }
+        .content-header h2 { margin: 0; font-family: var(--mono); font-size: 18px; font-weight: 500; text-transform: lowercase; flex: 1; }
+
+        .viewer { position: relative; flex: 1; overflow: hidden; background: var(--color-viewer); border: 1px solid var(--color-border); border-radius: 6px; }
+        .example-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: none; background: var(--color-viewer); }
+
+        .viewer-toolbar { position: absolute; right: 14px; bottom: 14px; z-index: 3; display: flex; gap: 8px; }
+
+        .viewer-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 11px;
+            background: var(--color-glass);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            color: #e8eaed;
+            font-family: var(--mono);
+            font-size: 11px;
+            text-transform: lowercase;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .viewer-btn:hover { background: rgba(35, 39, 47, 0.92); border-color: rgba(255, 255, 255, 0.28); }
+        .viewer-btn svg { width: 13px; height: 13px; }
+
+        .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 999; }
+        .sidebar-overlay.show { display: block; }
+
+        @media (min-width: 769px) {
+            .sidebar { position: static; transform: none; width: 300px; min-width: 300px; max-width: none; box-shadow: none; }
+            .viewer { box-shadow: 0 12px 34px rgba(0, 0, 0, 0.16); }
+            .hamburger { display: none; }
+            .sidebar-overlay { display: none !important; }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-top">
+            <div class="sidebar-header"><h1 class="rainbow-text">sandbox</h1></div>
+            <div class="search-container">
+                <input type="text" id="search-input" class="search-input" placeholder="search examples..." />
+            </div>
+        </div>
+        <ul class="examples-list" id="examples-list"></ul>
+    </div>
+
+    <div class="content">
+        <div class="content-header">
+            <button class="hamburger" id="hamburger">☰</button>
+            <h2 id="example-title" class="rainbow-text">Select an example</h2>
+        </div>
+        <div class="viewer" id="viewer">
+            <iframe class="example-frame" id="example-frame" title="example"></iframe>
+            <div class="viewer-toolbar">
+                <a class="viewer-btn" id="btn-source" target="_blank" rel="noopener" title="View source">source</a>
+                <a class="viewer-btn" id="btn-open" target="_blank" rel="noopener" title="Open in a new tab">open</a>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import examples from "./src/examples.json";
+
+        const CATEGORY_ORDER = ["react", "core"];
+        const orderIndex = (v) => (CATEGORY_ORDER.indexOf(v) === -1 ? CATEGORY_ORDER.length : CATEGORY_ORDER.indexOf(v));
+        const pretty = (c) => (c ? c.charAt(0).toUpperCase() + c.slice(1) : "Other");
+
+        function render() {
+            const byCategory = new Map();
+            for (const [key, ex] of Object.entries(examples)) {
+                const cat = ex.category || "other";
+                if (!byCategory.has(cat)) byCategory.set(cat, []);
+                byCategory.get(cat).push([key, ex]);
+            }
+            const cats = [...byCategory.keys()].sort((a, b) => orderIndex(a) - orderIndex(b));
+            let html = "";
+            for (const cat of cats) {
+                html += `<li class="category-group" data-category="${cat}"><div class="category-header">${pretty(cat)}</div><ul class="examples-list" style="padding:0;">`;
+                for (const [key, ex] of byCategory.get(cat)) {
+                    html += `<li class="example-card" data-example="${key}"><a class="example-item" data-example="${key}">${ex.title}</a></li>`;
+                }
+                html += `</ul></li>`;
+            }
+            document.getElementById("examples-list").innerHTML = html;
+        }
+        render();
+
+        const $ = (id) => document.getElementById(id);
+        const sidebar = $("sidebar"), overlay = $("sidebar-overlay");
+
+        function loadExample(key) {
+            const ex = examples[key];
+            if (!ex) return;
+            $("example-title").textContent = ex.title;
+            $("example-frame").src = `./${key}.html`;
+            $("btn-source").href = `https://github.com/pmndrs/sandbox/blob/main/examples/src/${ex.source}`;
+            $("btn-open").href = `./${key}.html`;
+            for (const item of document.querySelectorAll(".example-item")) {
+                item.classList.toggle("active", item.getAttribute("data-example") === key);
+            }
+            window.location.hash = key;
+            sidebar.classList.remove("open");
+            overlay.classList.remove("show");
+        }
+
+        $("search-input").addEventListener("input", (e) => {
+            const term = e.target.value.toLowerCase();
+            for (const card of document.querySelectorAll(".example-card")) {
+                const ex = examples[card.getAttribute("data-example")];
+                const text = [ex.title, ex.category].join(" ").toLowerCase();
+                card.style.display = text.includes(term) ? "" : "none";
+            }
+            for (const group of document.querySelectorAll(".category-group")) {
+                const any = [...group.querySelectorAll(".example-card")].some((c) => c.style.display !== "none");
+                group.classList.toggle("hidden", !any);
+            }
+        });
+
+        for (const item of document.querySelectorAll(".example-item")) {
+            item.addEventListener("click", (e) => { e.preventDefault(); loadExample(item.getAttribute("data-example")); });
+        }
+        $("hamburger").addEventListener("click", () => { sidebar.classList.toggle("open"); overlay.classList.toggle("show"); });
+        overlay.addEventListener("click", () => { sidebar.classList.remove("open"); overlay.classList.remove("show"); });
+
+        const fromHash = () => window.location.hash.substring(1);
+        loadExample(examples[fromHash()] ? fromHash() : Object.keys(examples)[0]);
+        window.addEventListener("hashchange", () => examples[fromHash()] && loadExample(fromHash()));
+    </script>
+</body>
+
+</html>
