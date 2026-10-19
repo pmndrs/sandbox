@@ -2,7 +2,11 @@
     "compilerOptions": {
         "target": "ES2022",
         "module": "ESNext",
-        "lib": ["ES2022", "DOM", "DOM.Iterable"],
+        "lib": [
+            "ES2022",
+            "DOM",
+            "DOM.Iterable"
+        ],
         "moduleResolution": "bundler",
         "jsx": "react-jsx",
         "strict": true,
@@ -11,8 +15,22 @@
         "esModuleInterop": true,
         "noEmit": true,
         "skipLibCheck": true,
-        "types": []
+        "types": [],
+        "allowImportingTsExtensions": true,
+        "paths": {
+            "@pmndrs/sandbox": [
+                "../src/index.ts"
+            ],
+            "@pmndrs/sandbox/react": [
+                "../src/react/index.ts"
+            ]
+        }
     },
-    "include": ["./src", "vite-env.d.ts"],
-    "exclude": ["./dist"]
+    "include": [
+        "./src",
+        "vite-env.d.ts"
+    ],
+    "exclude": [
+        "./dist"
+    ]
 }
