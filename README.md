@@ -1,23 +1,27 @@
 # @pmndrs/sandbox
 
-Embeddable, in-browser code sandboxes with HMR. oxc (wasm) transforms on the page; vite's module runner evaluates in an iframe; npm deps come from esm.sh.
+Embeddable code sandboxes that run in the browser, with hot module reloading.
+
+Code is transformed on the page with [oxc](https://oxc.rs) (compiled to wasm), then run in an iframe by Vite's module runner. npm packages are loaded from [esm.sh](https://esm.sh).
 
 ```ts
 import { createDevServer, memoryFs, css, json, assets, typescript, react, dependencies } from '@pmndrs/sandbox';
 
 const fs = memoryFs({ '/main.tsx': `console.log('hi!')` });
+
 const devServer = createDevServer({
     fs,
     plugins: [css(), json(), assets(), typescript(), react(), dependencies({ react: '^19', 'react-dom': '^19' })],
 });
 
 const session = await devServer.open();
-const mount = session.mount('/main.tsx', { into: iframe });
+session.mount('/main.tsx', { into: iframe });
 
-fs.write('/main.tsx', `console.log('hot!')`); // hot-updates the iframe
+// updates the iframe without a reload
+fs.write('/main.tsx', `console.log('hot!')`);
 ```
 
-React components (editor, preview, console):
+There are also React components for an editor, preview and console:
 
 ```tsx
 import { Sandbox } from '@pmndrs/sandbox/react';
